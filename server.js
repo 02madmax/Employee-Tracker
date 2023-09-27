@@ -5,7 +5,7 @@ const db = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: 'N@la7917',
-    database: 'employee_db'
+    database: 'employees_db'
 },
 console.log(`Connected to the database.`)
 );
@@ -133,21 +133,59 @@ function addRoles() {
 }
 
 function addEmployees() {
-    inquirer.prompt({
-        type: 'input',
-        name: 'employees',
-        message: 'Name of employee?'
-    }).then(response => {
-        db.query('INSERT INTO employees (name) VALUES (?)', [response.employees], function (err, results) {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'name',
+            message: 'Name of Employee?'
+        },
+        {
+            type: 'list',
+            name: 'role',
+            message: 'Role of Employee?',
+            choices: [
+                'Sales',
+                'Engineering',
+                'Finance',
+                'Legal'
+            ]
+        },
+        {
+            type: 'list',
+            name: 'manager',
+            message: 'Manager of Employee?',
+            choices: [
+                'John Doe',
+                'Mike Chan',
+            ]
+        }
+    ]).then(response => {
+        // Get role_id for the chosen role
+        db.query(`SELECT id FROM roles WHERE title = ?`, [response.role], function(err, roleResults) {
             if (err) throw err;
-            console.log('Employee added!');
-            mainPrompt();
+            const roleId = roleResults[0].id;
+
+            // Get manager_id for the chosen manager
+            db.query(`SELECT id FROM employees WHERE name = ?`, [response.manager], function(err, managerResults) {
+                if (err) throw err;
+                const managerId = managerResults[0].id;
+
+                // Now, insert the new employee with the role_id and manager_id
+                const sql = "INSERT INTO employees (name, role_id, manager_id) VALUES (?, ?, ?)";
+                const params = [response.name, roleId, managerId];
+                console.log(params);
+                db.query(sql, params, function(err, results) {
+                    if (err) throw err;
+                    console.log('Employee added!');
+                    mainPrompt();
+                });
+            });
         });
     });
 }
 
+
 function updateEmployeeRole() {
-    // TODO: Implement this function
     console.log('Feature not yet implemented!');
     mainPrompt();
 }

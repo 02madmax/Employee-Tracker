@@ -1,12 +1,11 @@
 SELECT 
     employees.id, 
-    employees.first_name, 
-    employees.last_name, 
+    employees.name,
     roles.title, 
-    departments.department, 
+    departments.name, 
     roles.salary, 
     employees.manager_id, 
-    manager.first_name AS manager_first_name
+    manager.name AS manager
 FROM employees 
 JOIN roles ON employees.role_id = roles.id
 JOIN departments ON roles.department_id = departments.id
