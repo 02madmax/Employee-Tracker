@@ -2,7 +2,7 @@ const mysql = require('mysql2');
 const inquirer = require('inquirer');
 
 const db = mysql.createConnection({
-    host: 'localhost',
+    host: '127.0.0.1',
     user: 'root',
     password: 'N@la7917',
     database: 'employees_db'
@@ -144,10 +144,10 @@ function addEmployees() {
             name: 'role',
             message: 'Role of Employee?',
             choices: [
-                'Sales',
-                'Engineering',
-                'Finance',
-                'Legal'
+                'Sales Rep',
+                'Software Engineer',
+                'Financial Analyst',
+                'Lawyer'
             ]
         },
         {
@@ -163,17 +163,30 @@ function addEmployees() {
         // Get role_id for the chosen role
         db.query(`SELECT id FROM roles WHERE title = ?`, [response.role], function(err, roleResults) {
             if (err) throw err;
+
+            if (roleResults.length === 0) {
+                console.error(`No role found with the title: ${response.role}`);
+                mainPrompt();
+                return;
+            }
+
             const roleId = roleResults[0].id;
 
             // Get manager_id for the chosen manager
             db.query(`SELECT id FROM employees WHERE name = ?`, [response.manager], function(err, managerResults) {
                 if (err) throw err;
+
+                if (managerResults.length === 0) {
+                    console.error(`No employee found with the name: ${response.manager}`);
+                    mainPrompt();
+                    return;
+                }
+
                 const managerId = managerResults[0].id;
 
                 // Now, insert the new employee with the role_id and manager_id
-                const sql = "INSERT INTO employees (name, role_id, manager_id) VALUES (?, ?, ?)";
+                const sql = `INSERT INTO employees (name, role_id, manager_id) VALUES (?, ?, ?)`;
                 const params = [response.name, roleId, managerId];
-                console.log(params);
                 db.query(sql, params, function(err, results) {
                     if (err) throw err;
                     console.log('Employee added!');
@@ -186,8 +199,52 @@ function addEmployees() {
 
 
 function updateEmployeeRole() {
-    console.log('Feature not yet implemented!');
-    mainPrompt();
+    // First, fetch all employees for selection
+    db.query('SELECT id, name FROM employees', (err, employeeResults) => {
+        if (err) throw err;
+
+        // Transform employee results to be usable in the inquirer choices
+        const employeeChoices = employeeResults.map(employee => ({
+            name: employee.name,
+            value: employee.id
+        }));
+
+        // Fetch all roles for selection
+        db.query('SELECT id, title FROM roles', (err, roleResults) => {
+            if (err) throw err;
+
+            // Transform role results to be usable in the inquirer choices
+            const roleChoices = roleResults.map(role => ({
+                name: role.title,
+                value: role.id
+            }));
+
+            // Ask the user which employee they want to update and the new role
+            inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'employeeId',
+                    message: 'Which employee do you want to update?',
+                    choices: employeeChoices
+                },
+                {
+                    type: 'list',
+                    name: 'roleId',
+                    message: 'What is the new role for this employee?',
+                    choices: roleChoices
+                }
+            ]).then(response => {
+                // Update the employee's role in the database
+                const sql = `UPDATE employees SET role_id = ? WHERE id = ?`;
+                db.query(sql, [response.roleId, response.employeeId], (err, results) => {
+                    if (err) throw err;
+                    console.log('Employee role updated!');
+                    mainPrompt();
+                });
+            });
+        });
+    });
 }
+
 
 mainPrompt();
